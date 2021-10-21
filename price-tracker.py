@@ -8,7 +8,6 @@ import csv
 
 count = 0
 price_list = []
-password = codecs.decode(b"T3AyMHNnMTU3MCFt", 'base64').decode('utf-8')
 
 urls = [
     "https://www.amazon.de/dp/B08237CW9N"
