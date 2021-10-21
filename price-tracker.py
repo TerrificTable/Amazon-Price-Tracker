@@ -35,8 +35,8 @@ def check_price(url):
 def send_email(reason, message):
     s = smtplib.SMTP("smtp.gmail.com", 587)
     s.starttls()
-    s.login("derking6263@gmail.com", password)
-    s.sendmail("derking6263@gmail.com", "omegagaming189@gmail.com", message)
+    s.login("email", password)
+    s.sendmail("email", "email to send message to", message)
     s.quit()
 
 
