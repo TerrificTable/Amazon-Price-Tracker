@@ -86,7 +86,6 @@ def log(item, price, decrease, bigger) -> str:
         print(log)
         return None
     except Exception as e:
-        print("Unable to log data, " + e)
         return "Unable to log data, " + e
 
 
@@ -123,8 +122,11 @@ def main(url):
 
 
 while 1:
-    for i, url in enumerate(urls):
-        i = i+1
-        main(url)
-        print(f"[{i}]\n\n\n")
-    time.sleep(timeout)
+    h = time.strftime("%h:%m")
+
+    if h == "12:00" or h == "0:00":
+        for i, url in enumerate(urls):
+            i = i+1
+            main(url)
+            print(f"[{i}]\n\n\n")
+    time.sleep(60*5)
