@@ -1,0 +1,10 @@
+{
+    "gmail": {
+        "email": "YOUR GMAIL ADDRESS HERE",
+        "password": "PASSWORD TO YOUR GMAIL HERE"
+    },
+    "options": {
+        "timeout": 86000
+    },
+    "recever": "EMAIL WHO SHOULD RECEVE THE UPDATE MAILS"
+}

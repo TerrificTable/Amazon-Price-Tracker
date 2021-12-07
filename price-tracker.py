@@ -2,16 +2,25 @@ from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from lxml import html
 import smtplib
-import codecs
 import time
+import json
 import csv
 
 count = 0
 price_list = []
 
+
 urls = [
     "https://www.amazon.de/dp/B08237CW9N"
 ]
+
+
+with open("./config.json", "r") as f:
+    data = json.load(f)
+    password = data["gmail"]["password"]
+    email = data["gmail"]["email"]
+    recv = data["options"]["recever"]
+    timeout = data["options"]["timeout"]
 
 
 def check_price(url):
