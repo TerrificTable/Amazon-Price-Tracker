@@ -1,47 +1,98 @@
-import numpy as np
-import os
+from typing_extensions import runtime
+from selenium.webdriver.chrome.options import Options
+from selenium import webdriver
+from time import sleep, time
+from lxml import html
+import sys
 
-data = []
-price = []
-reviews = []
+
+def clean(file) -> None:
+    with open(file, "r+", encoding="utf-8") as f:
+        content = f.read()
+        content_clean1 = content.replace("'", "")
+        content_clean2 = content_clean1.replace(
+            ", [],", ", ???,").replace("[],", "").replace("[]", "")
+        content_clean3 = content_clean2.replace(" ???,  \n", "").replace(
+            "\n\n\n\n\n\n", "\n\n---, New Search, Quarry, ---\n\n")
+
+    with open("./cleancsv/clean-" + file.replace("./", "").replace("csv/", ""), "w+", encoding="utf-8") as f:
+        f.write(content_clean3)
 
 
-for file in os.listdir("./cleancsv/"):
-    with open("./cleancsv/{}".format(file), "r", encoding="utf-8") as f:
-        lines = f.readlines()
+def fetch_urls(keywords, *args):
+    lastTime = None
+    for keyword in keywords:
+        driver = webdriver.Chrome(options=options)
+        for page_nb in range(1, 10):
+            driver.get(
+                "https://www.amazon.com/s?k={}&page={}".format(keyword, page_nb))
+            sleep(1)
 
-        for i, line in enumerate(lines):
-            if i > 0:
-                line = line.split(", ")
-                data.append(line)
+            tree = html.fromstring(driver.page_source)
+
+            for x, product_tree in enumerate(tree.xpath('//div[contains(@data-cel-widget, "search_result_")]')):
+                title = product_tree.xpath(
+                    './/span[@class="a-size-medium a-color-base a-text-normal"]/text()')
+                reviews = product_tree.xpath(
+                    './/span[@class="a-size-base"]/text()')
+                price = product_tree.xpath(
+                    './/span[@class="a-offscreen"]/text()')
+                links = list(product_tree.iterlinks())
                 try:
-                    if line[2] != "???" and line[2] != "Quarry" and not line[2].__contains__("amazon.com"):
-                        price.append(line[2])
-                    if line[1] != "New Search" and not line[1].__contains__("amazon.com"):
-                        reviews.append(
-                            line[1] if not line[1] == "[]" and line[1] != "???" else "0")
+                    (_, _, link, _) = links[0]
                 except:
-                    pass
+                    link = None
+                strLink = ("amazon.com/" +
+                           link) if not link == None else list()
+                listLink = [strLink]
+                link = (listLink if len(price)
+                        > 0 or len(title) > 0 else [])
 
-        newPrice = []
-        newReviews = []
-        for p in price:
-            p = p.split(".")
-            newPrice.append(
-                int(p[0].replace("$", "") if not p[0] == "\n" else 0))
-        for r in reviews:
-            newReviews.append(int(r.replace(".", "").replace("$", "")))
+                title = str(title[0]).replace(",", "") if len(title) > 0 else str(
+                    title).replace(",", "")
+                reviews = str(reviews[0]).replace(",", ".") if len(reviews) > 0 else str(
+                    reviews).replace(",", ".")
+                price = str(price[0]).replace("\xa0", "").replace(",", ".").replace("'", "") if len(price) > 0 else str(
+                    price).replace(",", ".").replace("\xa0", "").replace("'", "")
+                link = str(link[0]).replace("'", "") if len(link) > 0 else str(
+                    link).replace("'", "")  # .replace(",", "")
 
-        avgprice = np.mean(newPrice)
-        avgrev = np.mean(newReviews)
-        print("Average Price of \"{}\": ".format(
-            file.replace("clean-data-", "")
-                .replace("_", " ")
-                .replace(".csv", "")
-        ) + str(avgprice.round(2)))
+                info = str((title, reviews, price, link)).replace(
+                    "(", "").replace(")", "")
+                with open("./csv/data-{}.csv".format(keyword.replace(" ", "_")), "a", encoding="utf-8") as f:
+                    f.write(str(info).replace(
+                        "(", "").replace(")", "") + "\n")
 
-        print("Average Reviews of \"{}\": ".format(
-            file.replace("clean-data-", "")
-            .replace("_", " ")
-            .replace(".csv", "")
-        ) + str(avgrev.round(1)) + "\n")
+        with open("./csv/data-{}.csv".format(keyword.replace(" ", "_")), "a", encoding="utf-8") as f:
+            f.write("\n\n\n\n\n\n")
+
+        driver.close()
+        sleep(1)
+        clean("./csv/data-{}.csv".format(keyword.replace(" ", "_")))
+        runTime = time() - startTime
+        print("Finished collecting \"{}\" data in {} Seconds".format(
+            keyword, (runTime.__round__(3)-lastTime if lastTime is not None else runTime.__round__(3)).__round__(3)))
+        lastTime = time() - startTime
+    runTime = time() - startTime
+    sys.exit("Finished in {}".format(runTime.__round__(3)))
+
+
+args = sys.argv
+if len(args) > 0:
+    if args[1].__contains__("-a"):
+        keywords = args[2::]
+
+else:
+    keywords = ["keyboard"]
+
+for keyword in keywords:
+    with open("./csv/data-{}.csv".format(keyword.replace(" ", "_")), "w", encoding="utf-8") as f:
+        f.write("name, reviews, price, link\n")
+
+options = Options()
+options.add_argument('--headless')
+options.add_argument('--disable-gpu')
+options.add_experimental_option("excludeSwitches", ["enable-logging"])
+print("Start")
+startTime = time()
+fetch_urls(keywords)
