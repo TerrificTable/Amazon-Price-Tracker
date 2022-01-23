@@ -1,6 +1,3 @@
-from msilib.schema import RemoveFile
-import os
-from typing_extensions import runtime
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from time import sleep, time
@@ -17,21 +14,20 @@ def clean(file) -> None:
         content_clean3 = content_clean2.replace(" ???,  \n", "").replace(
             "\n\n\n\n\n\n", "\n\n---, New Search, Quarry, ---\n\n")
 
-    with open("./cleancsv/clean-" + file.replace("./", "").replace("csv/", ""), "w+", encoding="utf-8") as f:
+    with open("clean-" + file.replace("./", ""), "w+", encoding="utf-8") as f:
         f.write(content_clean3)
 
 
 def fetch_urls(keywords, *args):
-    lastTime = None
     for keyword in keywords:
         driver = webdriver.Chrome(options=options)
-        keyword = keyword.replace("-", " ")
-
         for page_nb in range(1, 10):
-            driver.get(f"https://www.amazon.com/s?k={keyword}&page={page_nb}")
+            driver.get(
+                "https://www.amazon.com/s?k={}&page={}".format(keyword, page_nb))
             sleep(1)
 
             tree = html.fromstring(driver.page_source)
+
             for x, product_tree in enumerate(tree.xpath('//div[contains(@data-cel-widget, "search_result_")]')):
                 title = product_tree.xpath(
                     './/span[@class="a-size-medium a-color-base a-text-normal"]/text()')
@@ -40,58 +36,46 @@ def fetch_urls(keywords, *args):
                 price = product_tree.xpath(
                     './/span[@class="a-offscreen"]/text()')
                 links = list(product_tree.iterlinks())
-                try:
-                    (_, _, link, _) = links[0]
-                except:
-                    link = None
-                strLink = ("amazon.com/"+link) if not link == None else list()
+                (_, _, link, _) = links[0]
+                strLink = "amazon.com/" + link
                 listLink = [strLink]
-                link = (listLink if len(price) > 0 or len(title) > 0 else [])
+                link = (listLink if len(price)
+                        > 0 or len(title) > 0 else [])
 
-                title = str(title[0]).replace(",", "") if len(
-                    title) > 0 else str(title).replace(",", "")
-                reviews = str(reviews[0]).replace(",", ".") if len(reviews) > 0 else str(
-                    reviews).replace(",", ".")
+                title = str(title[0]).replace(",", "") if len(title) > 0 else str(
+                    title).replace(",", "")
+                reviews = str(reviews[0]).replace(",", ".") if len(
+                    reviews) > 0 else str(reviews).replace(",", ".")
                 price = str(price[0]).replace("\xa0", "").replace(",", ".").replace("'", "") if len(price) > 0 else str(
                     price).replace(",", ".").replace("\xa0", "").replace("'", "")
-                link = str(link[0]).replace("'", "") if len(
-                    link) > 0 else str(link).replace("'", "")
+                link = str(link[0]).replace("'", "") if len(link) > 0 else str(
+                    link).replace("'", "")  # .replace(",", "")
 
-                for word in keyword.split(" "):
-                    if title.__contains__(word):
-                        info = str((title, reviews, price, link)).replace(
-                            "(", "").replace(")", "")
-                        with open("./csv/data-{}.csv".format(keyword.replace(" ", "_").replace("-", "_")), "a", encoding="utf-8") as f:
-                            f.write(str(info).replace(
-                                "(", "").replace(")", "")+"\n")
-        with open("./csv/data-{}.csv".format(keyword.replace(" ", "_")), "a", encoding="utf-8") as f:
+                info = str((title, reviews, price, link)).replace(
+                    "(", "").replace(")", "")
+                with open("./data-{}.csv".format(keyword), "a", encoding="utf-8") as f:
+                    f.write(str(info).replace(
+                        "(", "").replace(")", "") + "\n")
+
+        with open("./data-{}.csv".format(keyword), "a", encoding="utf-8") as f:
             f.write("\n\n\n\n\n\n")
 
         driver.close()
         sleep(1)
-        clean("./csv/data-{}.csv".format(keyword.replace(" ", "_")))
+        clean("./data-{}.csv".format(keyword))
         runTime = time() - startTime
         print("Finished collecting \"{}\" data in {} Seconds".format(
-            keyword, (runTime.__round__(3)-lastTime if lastTime is not None else runTime.__round__(3)).__round__(3)))
-        lastTime = time() - startTime
+            keyword, runTime.__round__(4)))
     runTime = time() - startTime
-    sys.exit("Finished in {}".format(runTime.__round__(3)))
+    sys.exit("Finished in {}".format(runTime.__round__(4)))
 
 
-args = sys.argv
-if len(args) > 1:
-    if args[1].__contains__("-a"):
-        keywords = args[2::]
-else:
-    sys.exit("usage: run.py -a [args]")
-
-for keyword in keywords:
-    if os.path.isfile("./csv/data-{}.csv".format(keyword.replace(" ", "_").replace("-", "_"))):
-        os.remove(
-            f"./csv/data-{keyword.replace(' ', '_').replace('-', '_')}.csv")
-
-    with open("./csv/data-{}.csv".format(keyword.replace(" ", "_").replace("-", "_")), "w", encoding="utf-8") as f:
-        f.write("name, reviews, price, link\n")
+keywords = sys.argv
+if keywords[1] == "-k":
+    keywords = keywords[2::]
+    for keyword in keywords:
+        with open("./data-{}.csv".format(keyword), "w", encoding="utf-8") as f:
+            f.write("name, reviews, price, link\n")
 
 options = Options()
 options.add_argument('--headless')
